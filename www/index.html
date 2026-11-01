@@ -23,6 +23,22 @@
     <p v-if="message" :class="isSuccess ? 'success' : 'error'">
       {{ message }}
     </p>
+
+
+    <div class="card mt-4" v-if="workout">
+      <div class="card-header">Current workout: {{ workout.name }}</div>
+      <div class="card-body">
+        <h4 class="card-title">{{ workout.name }}</h4>
+        <p class="card-text">{{ workout.description }}</p>
+        <ul class="list-unstyled mb-0">
+          <li><strong>Effort:</strong> {{ workout.effort }}</li>
+          <li><strong>Time:</strong> {{ workout.time }} min</li>
+          <li><strong>Muscle groups:</strong> {{ workout.muscleGroups.join(', ') }}</li>
+          <li><strong>Equipment:</strong> {{ workout.equipment.join(', ') }}</li>
+        </ul>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -48,9 +64,20 @@
     // =========================
     const { createApp } = Vue;
 
+    const workouts = [
+      { name: "Squats", effort: "high", time: 10, description: "Lower your hips until thighs are parallel to the floor, then stand up.", muscleGroups: ["quadriceps", "glutes", "hamstrings"], equipment: ["none"] },
+      { name: "Bench Press", effort: "high", time: 15, description: "Lie on a bench and press the barbell up from chest level.", muscleGroups: ["chest", "triceps", "shoulders"], equipment: ["barbell", "bench"] },
+      { name: "Push-ups", effort: "medium", time: 5, description: "Lower and raise your body with a straight back using your arms.", muscleGroups: ["chest", "triceps", "core"], equipment: ["none"] },
+      { name: "Deadlift", effort: "high", time: 15, description: "Lift a barbell from the floor to hip level with a flat back.", muscleGroups: ["back", "glutes", "hamstrings"], equipment: ["barbell"] },
+      { name: "Plank", effort: "medium", time: 3, description: "Hold a straight body position supported on forearms and toes.", muscleGroups: ["core", "shoulders"], equipment: ["none"] },
+      { name: "Dumbbell Curls", effort: "low", time: 8, description: "Curl dumbbells towards your shoulders with controlled motion.", muscleGroups: ["biceps"], equipment: ["dumbbells"] },
+      { name: "Pull-ups", effort: "high", time: 8, description: "Pull your chin above the bar from a dead hang.", muscleGroups: ["back", "biceps"], equipment: ["pull-up bar"] },
+    ];
+
     createApp({
       data() {
         return {
+          workout: null,
           email: "",
           password: "",
           message: "implement me!",
@@ -58,7 +85,18 @@
           isSuccess: false,
         };
       },
+      mounted() {
+        this.pickWorkout();
+        this.timer = setInterval(this.pickWorkout, 30000);
+      },
+      unmounted() {
+        clearInterval(this.timer);
+      },
       methods: {
+        pickWorkout() {
+          const others = workouts.filter((w) => w !== this.workout);
+          this.workout = others[Math.floor(Math.random() * others.length)];
+        },
         async handleLogin() {
           this.loading = true;
           this.message = "";
