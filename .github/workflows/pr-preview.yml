@@ -1,0 +1,91 @@
+name: PR Preview Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-preview:
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v6
+
+      - name: Build preview URL
+        id: preview
+        shell: bash
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          PR="${{ github.event.pull_request.number }}"
+
+          if [[ "$REPO" == "${OWNER}.github.io" ]]; then
+            URL="https://${OWNER}.github.io/pr-${PR}/"
+          else
+            URL="https://${OWNER}.github.io/${REPO}/pr-${PR}/"
+          fi
+
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+          echo "folder=pr-${PR}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish PR preview to gh-pages
+        uses: peaceiris/actions-gh-pages@v4.1.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./www
+          destination_dir: ${{ steps.preview.outputs.folder }}
+          keep_files: true
+
+      - name: Add preview link to workflow summary
+        run: |
+          echo "## PR Preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "Preview URL: ${{ steps.preview.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Folder on gh-pages: ${{ steps.preview.outputs.folder }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=PR Preview URL::${{ steps.preview.outputs.url }}"
+
+  cleanup-preview:
+    if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+
+      - name: Remove closed PR preview folder
+        shell: bash
+        run: |
+          FOLDER="pr-${{ github.event.pull_request.number }}"
+          if [[ -d "$FOLDER" ]]; then
+            rm -rf "$FOLDER"
+            git add -A
+            if git diff --cached --quiet; then
+              echo "No changes to commit after deleting ${FOLDER}."
+            else
+              git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
+                commit -m "chore: remove preview for closed PR #${{ github.event.pull_request.number }}"
+              git push
+            fi
+          else
+            echo "No preview folder to remove for ${FOLDER}."
+          fi
+
+  fork-pr-note:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Explain why preview was skipped
+        run: |
+          echo "## PR Preview Skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "This PR comes from a fork. With default token permissions, deployments are skipped for safety." >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=PR Preview Skipped::Fork PR detected; preview deployment was skipped."
