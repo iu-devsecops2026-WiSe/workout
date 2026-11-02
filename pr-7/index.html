@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <script src="inc/vue.global.js"></script>
+  <link href="inc/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .success {
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app" class="container col-sm-6 mt-4">
+    <h2>Login</h2>
+
+    <!-- add elements here! -->
+    <p v-if="message" :class="isSuccess ? 'success' : 'error'">
+      {{ message }}
+    </p>
+  </div>
+
+  <script>
+    // =========================
+    // Fake API (Do not change)
+    // =========================
+    async function loginApi(email, password) {
+      console.log("API called with:", email, password);
+
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          if (email === "test@test.com" && password === "1234") {
+            resolve({ success: true, name: "Test User" });
+          } else {
+            reject({ success: false, message: "Invalid credentials" });
+          }
+        }, 1000);
+      });
+    }
+
+    // =========================
+    // Vue App
+    // =========================
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          email: "",
+          password: "",
+          message: "implement me!",
+          loading: false,
+          isSuccess: false,
+        };
+      },
+      methods: {
+        async handleLogin() {
+          this.loading = true;
+          this.message = "";
+          try {
+            const result = await loginApi(this.email, this.password);
+            this.isSuccess = true;
+            this.message = `Welcome ${result.name}`;
+          } catch (error) {
+            this.isSuccess = false;
+            this.message = error.message;
+          } finally {
+            this.loading = false;
+          }
+        },
+      },
+    }).mount("#app");
+
+  </script>
+
+</body>
+</html>
