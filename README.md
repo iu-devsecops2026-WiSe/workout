@@ -1,4 +1,6 @@
 # workout
 Demo project for a workout planner
 
-tech stack tbd
+tech stack:
+* Node.js
+
